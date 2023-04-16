@@ -22,7 +22,8 @@ defmodule Wiki.Page do
     attrs
     |> Keyword.update(:private, true, &(!!&1))
     |> then(fn keywords ->
-      [filename: filename, private: private] = Keyword.take(keywords, [:filename, :private])
+      {filename, keywords} = Keyword.pop!(keywords, :filename)
+      private = Keyword.fetch!(keywords, :private)
 
       filename =
         filename
