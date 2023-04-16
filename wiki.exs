@@ -2,6 +2,16 @@
 
 Mix.install([:nimble_publisher])
 
+{opts, _, _} =
+  OptionParser.parse(System.argv(),
+    strict: [private: :boolean],
+    aliases: [p: :private]
+  )
+
+if Keyword.get(opts, :private, false) do
+  IO.puts("WARNING: Private pages are generated!")
+end
+
 defmodule Wiki.Config do
   @input_directory "input"
   def input_directory(), do: Path.join(File.cwd!(), @input_directory)
@@ -23,21 +33,14 @@ defmodule Wiki.Page do
     |> Keyword.update(:private, true, &(!!&1))
     |> then(fn keywords ->
       {filename, keywords} = Keyword.pop!(keywords, :filename)
-      private = Keyword.fetch!(keywords, :private)
 
       filename =
         filename
         |> Path.relative_to(Wiki.Config.input_directory())
-        |> Path.rootname()
-
-      filename =
-        Path.join([
-          if(private, do: "private", else: "public"),
-          filename <> ".html"
-        ])
+        |> Path.rootname(".md")
 
       keywords
-      |> Keyword.put(:filename, filename)
+      |> Keyword.put(:filename, filename <> ".html")
       |> Keyword.put(:category, Path.dirname(filename))
       |> Keyword.put_new_lazy(:title, fn -> filename end)
     end)
@@ -74,7 +77,7 @@ defmodule Wiki.Helpers do
   def categories(path) when is_binary(path) do
     path
     |> Path.split()
-    |> Enum.reduce([], fn
+    |> Enum.reduce([""], fn
       dir, [] -> [dir]
       dir, [head | _] = acc -> [Path.join(head, dir) | acc]
     end)
@@ -84,6 +87,7 @@ end
 
 index_template = Path.join([File.cwd!(), "templates", "index.html.eex"])
 page_template = Path.join([File.cwd!(), "templates", "page.html.eex"])
+error_403_template = Path.join([File.cwd!(), "templates", "403.html.eex"])
 
 Wiki.pages()
 |> Enum.map(& &1.category)
@@ -93,17 +97,15 @@ Wiki.pages()
 |> Enum.each(fn category ->
   pages = Enum.filter(Wiki.pages(), &(&1.category == category))
 
-  {:ok, regex} = Regex.compile("^#{category}/\\w+$")
-
   sub_categories =
     Wiki.pages()
     |> Enum.map(& &1.category)
     |> Enum.flat_map(&Wiki.Helpers.categories(&1))
     |> Enum.uniq()
     |> Enum.sort()
-    |> Enum.drop_while(&(&1 != category))
-    |> Enum.drop(1)
-    |> Enum.filter(&String.match?(&1, regex))
+    |> Enum.filter(&String.starts_with?(&1, category))
+    |> Enum.reject(&(&1 == category))
+    |> Enum.reject(&String.contains?(String.replace_leading(&1, category <> "/", ""), "/"))
 
   path =
     [Wiki.Config.output_directory(), category, "index.html"]
@@ -116,9 +118,16 @@ Wiki.pages()
 end)
 
 Enum.each(Wiki.pages(), fn page ->
+  template =
+    if !page.private || Keyword.get(opts, :private, false) do
+      page_template
+    else
+      error_403_template
+    end
+
   path = Path.join(Wiki.Config.output_directory(), page.filename)
 
-  page_template
+  template
   |> EEx.eval_file(assigns: [page: page])
   |> Wiki.Helpers.write_file(path)
 end)

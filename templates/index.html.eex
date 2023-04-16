@@ -26,7 +26,12 @@
 
     <span>
       <%= for category <- Wiki.Helpers.categories(@category) do %>
-        <a href="<%= Path.join([Wiki.Config.output_directory(), category, "index.html"]) %>"><%= Path.basename(category) %></a> /
+        <%= case category do %>
+        <% "" -> %>
+          <a href="<%= Path.join([Wiki.Config.output_directory(), "index.html"]) %>">[root]</a> /
+        <% category -> %>
+          <a href="<%= Path.join([Wiki.Config.output_directory(), category, "index.html"]) %>">[<%= Path.basename(category) %>]</a> /
+        <% end %>
       <% end %>
     </span>
   </footer>
