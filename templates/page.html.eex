@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>wiki</title>
+</head>
+<body>
+  <header>
+    <h1><%= @page.title %></h1>
+  </header>
+
+  <%= @page.content %>
+
+  <footer>
+    <hr />
+
+    <span>
+      <%= for category <- Wiki.Helpers.categories(@page.category) do %>
+        <a href="<%= Path.join([Wiki.Config.output_directory(), category, "index.html"]) %>"><%= Path.basename(category) %></a> /
+      <% end %>
+      <a href="<%= Path.join([Wiki.Config.output_directory(), @page.filename]) %>"><%= @page.title %></a>
+    </span>
+  </footer>
+</body>
+</html>
