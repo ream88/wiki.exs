@@ -9,7 +9,7 @@ Mix.install([:nimble_publisher])
   )
 
 if Keyword.get(opts, :private, false) do
-  IO.puts("WARNING: Private pages are generated!")
+  IO.puts("#{IO.ANSI.red()}WARNING:#{IO.ANSI.reset()} Private pages are generated!")
 end
 
 defmodule Wiki.Config do
