@@ -1,6 +1,6 @@
 #!/usr/bin/env elixir
 
-Mix.install([:nimble_publisher])
+Mix.install([:nimble_publisher, :tailwind])
 
 {opts, _, _} =
   OptionParser.parse(System.argv(),
@@ -89,6 +89,8 @@ index_template = Path.join([File.cwd!(), "templates", "index.html.eex"])
 page_template = Path.join([File.cwd!(), "templates", "page.html.eex"])
 error_403_template = Path.join([File.cwd!(), "templates", "403.html.eex"])
 
+File.rm_rf(Wiki.Config.output_directory())
+
 Wiki.pages()
 |> Enum.map(& &1.category)
 |> Enum.flat_map(&Wiki.Helpers.categories(&1))
@@ -107,13 +109,20 @@ Wiki.pages()
     |> Enum.reject(&(&1 == category))
     |> Enum.reject(&String.contains?(String.replace_leading(&1, category <> "/", ""), "/"))
 
+  assigns = [
+    pages: pages,
+    category: category,
+    sub_categories: sub_categories,
+    root_path: String.replace(category, ~r/\w+/, "..")
+  ]
+
   path =
     [Wiki.Config.output_directory(), category, "index.html"]
     |> Path.join()
     |> Path.expand()
 
   index_template
-  |> EEx.eval_file(assigns: [pages: pages, category: category, sub_categories: sub_categories])
+  |> EEx.eval_file(assigns: assigns)
   |> Wiki.Helpers.write_file(path)
 end)
 
@@ -125,9 +134,18 @@ Enum.each(Wiki.pages(), fn page ->
       error_403_template
     end
 
+  assigns = [page: page, root_path: String.replace(page.category, ~r/\w+/, "..")]
   path = Path.join(Wiki.Config.output_directory(), page.filename)
 
   template
-  |> EEx.eval_file(assigns: [page: page])
+  |> EEx.eval_file(assigns: assigns)
   |> Wiki.Helpers.write_file(path)
 end)
+
+Mix.Tasks.Tailwind.run([
+  "default",
+  "--config=tailwind.config.js",
+  "--input=templates/style.css",
+  "--output=output/style.css",
+  "--minify"
+])
