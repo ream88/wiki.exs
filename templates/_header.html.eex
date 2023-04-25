@@ -1,0 +1,45 @@
+<header>
+  <nav class="flex" aria-label="Breadcrumb">
+    <ol role="list" class="flex items-center space-x-1">
+      <li>
+        <div class="flex items-center">
+          <a class="text-sm font-medium text-gray-500 hover:text-gray-700" href="<%= Path.join([Wiki.Config.output_directory(), "index.html"]) %>" >
+            <svg class="flex-shrink-0 w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" />
+            </svg>
+            <span class="sr-only">Home</span>
+          </a>
+        </div>
+      </li>
+
+      <%= for category <- @categories, category != "" do %>
+        <li>
+          <div class="flex items-center">
+            <svg class="flex-shrink-0 w-5 h-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
+            </svg>
+
+            <a class="ml-1 text-sm font-medium text-gray-500 hover:text-gray-700" href="<%= Path.join([Wiki.Config.output_directory(), category, "index.html"]) %>">
+              <%= Path.basename(category) %>
+            </a>
+          </div>
+        </li>
+      <% end %>
+
+      <li>
+        <div class="flex items-center">
+          <svg class="flex-shrink-0 w-5 h-5 text-gray-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M5.555 17.776l8-16 .894.448-8 16-.894-.448z" />
+          </svg>
+          <a class="ml-1 text-sm font-medium text-gray-500 hover:text-gray-700" href="<%= Path.join([Wiki.Config.output_directory(), @filename]) %>" aria-current="page">
+            <%= @title %>
+          </a>
+        </div>
+      </li>
+    </ol>
+  </nav>
+
+  <h1 class="mt-8 text-3xl font-bold leading-8 tracking-tight text-gray-900 sm:text-4xl">
+    <%= @title %>
+  </h1>
+</header>
