@@ -9,6 +9,7 @@
   </head>
   <body class="px-6 py-16 mx-auto max-w-7xl lg:px-8">
     <%= EEx.eval_file("templates/_header.html.eex", assigns: Keyword.merge(assigns, categories: Wiki.Helpers.categories(""), title: @page.title, filename: @page.filename)) %>
+    <%= EEx.eval_file("templates/_listing.html.eex", assigns: assigns) %>
     <main class="mt-8 prose">
       <p class="flex items-center text-red-600 space-x-2">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-5 h-5">

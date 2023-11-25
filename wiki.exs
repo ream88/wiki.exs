@@ -3,14 +3,18 @@
 require Logger
 
 Application.put_env(:tailwind, :version, "3.2.4")
-Mix.install([:nimble_publisher, :tailwind])
+
+Mix.install([
+  :nimble_publisher,
+  :tailwind
+])
 
 defmodule Wiki.Config do
   @input_directory "input"
-  def input_directory(), do: Path.join(File.cwd!(), @input_directory)
+  def input_directory, do: Path.join(File.cwd!(), @input_directory)
 
   @output_directory "output"
-  def output_directory(), do: Path.join(File.cwd!(), @output_directory)
+  def output_directory, do: Path.join(File.cwd!(), @output_directory)
 end
 
 defmodule Wiki.Page do
@@ -18,7 +22,8 @@ defmodule Wiki.Page do
             private: true,
             title: nil,
             tags: [],
-            content: nil
+            content: nil,
+            index: false
 
   def build(filename, attrs, body) do
     attrs
@@ -41,6 +46,7 @@ defmodule Wiki.Page do
           |> Path.basename(".md")
         end
       )
+      |> Keyword.put(:index, Path.basename(attrs[:filename], ".md") == "index")
     end)
     |> then(&struct(__MODULE__, &1))
   end
@@ -56,7 +62,7 @@ defmodule Wiki do
     from: "#{Wiki.Config.input_directory()}/**/*.md",
     as: :pages
 
-  def pages(), do: @pages
+  def pages, do: @pages
 
   def build(opts \\ []) do
     File.rm_rf(Wiki.Config.output_directory())
@@ -65,7 +71,7 @@ defmodule Wiki do
     generate_css(opts)
   end
 
-  defp generate_index_pages(opts) do
+  defp generate_index_pages(_opts) do
     index_template = Path.join([File.cwd!(), "templates", "index.html.eex"])
 
     pages()
@@ -73,8 +79,20 @@ defmodule Wiki do
     |> Enum.map(&Path.dirname(&1))
     |> Enum.flat_map(&Wiki.Helpers.nested_paths/1)
     |> Enum.uniq()
+    |> Kernel.++(["."])
     |> Enum.each(fn path ->
       full_path = Path.expand(Path.join([Wiki.Config.output_directory(), path, "index.html"]))
+
+      root_path =
+        path
+        |> Path.split()
+        |> Enum.map(fn _ -> ".." end)
+        |> Path.join()
+
+      title =
+        path
+        |> Path.split()
+        |> List.last()
 
       folders =
         pages()
@@ -89,9 +107,9 @@ defmodule Wiki do
         end)
 
       assigns = [
-        root_path: String.replace(path, ~r(\w+), ".."),
+        root_path: if(path == ".", do: "", else: root_path),
         current_path: if(path == ".", do: "", else: path),
-        title: "Index of #{inspect(path)}",
+        title: title,
         folders: folders,
         pages: pages
       ]
@@ -107,15 +125,38 @@ defmodule Wiki do
     error_403_template = Path.join([File.cwd!(), "templates", "403.html.eex"])
 
     Enum.each(pages(), fn page ->
+      path = Path.dirname(page.filename)
+
+      root_path =
+        path
+        |> Path.split()
+        |> Enum.map(fn _ -> ".." end)
+        |> Path.join()
+
       full_path =
         Path.join(
           Wiki.Config.output_directory(),
           String.replace_suffix(page.filename, ".md", ".html")
         )
 
+      folders =
+        pages()
+        |> Enum.map(& &1.filename)
+        |> Wiki.Helpers.subfolders(path)
+
+      pages =
+        pages()
+        |> Enum.reject(& &1.index)
+        |> Enum.filter(&(Path.dirname(&1.filename) == path))
+        |> Enum.map(fn page ->
+          %{page | filename: String.replace_suffix(page.filename, ".md", ".html")}
+        end)
+
       assigns = [
-        root_path: String.replace(Path.dirname(page.filename), ~r(\w+), ".."),
-        current_path: Path.dirname(page.filename),
+        root_path: if(path == ".", do: "", else: root_path),
+        current_path: path,
+        folders: if(page.index, do: folders, else: []),
+        pages: if(page.index, do: pages, else: []),
         page: page
       ]
 
@@ -211,9 +252,12 @@ end
 unless Wiki.Helpers.application_started?(:ex_unit) do
   {opts, _, _} =
     OptionParser.parse(System.argv(),
-      strict: [private: :boolean],
-      aliases: [p: :private]
+      strict: [private: :boolean, log: :string],
+      aliases: [p: :private, l: :log]
     )
+
+  {log_level, opts} = Keyword.pop(opts, :log, "info")
+  Logger.configure(level: String.to_existing_atom(log_level))
 
   if Keyword.get(opts, :private, false) do
     IO.puts("#{IO.ANSI.red()}WARNING:#{IO.ANSI.reset()} Private pages are generated!")

@@ -15,7 +15,7 @@ defmodule Wiki.HelpersTest do
     "2021.md"
   ]
 
-  test "subfolders/1" do
+  test "subfolders/1 retrieves all subfolders of a folder" do
     assert Wiki.Helpers.subfolders(@structure) == ["2023", "2022"]
     assert Wiki.Helpers.subfolders(@structure, "2023") == ["2023/March"]
     assert Wiki.Helpers.subfolders(@structure, "2022") == ["2022/December"]
